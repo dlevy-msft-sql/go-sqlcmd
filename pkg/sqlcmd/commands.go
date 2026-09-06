@@ -138,7 +138,8 @@ func newCommands() Commands {
 			regex:  regexp.MustCompile(`(?im)^[ \t]*:HELP(?:[ \t]+(.*$)|$)`),
 			action: helpCommand,
 			name:   "HELP",
-			help:   ":help\n  - Shows this list of commands.\n",
+			help: ":help\n  - Shows this list of commands.\n" +
+				":help <command>\n  - Shows help for the specified command.\n",
 		},
 		"PERFTRACE": {
 			regex:  regexp.MustCompile(`(?im)^[ \t]*:PERFTRACE(?:[ \t]+(.*$)|$)`),
