@@ -515,16 +515,17 @@ func TestHelpCommand(t *testing.T) {
 	assert.Contains(t, output, ":exit", "HELP exit should show exit help")
 	assert.NotContains(t, output, ":connect", "HELP exit should not show connect help")
 
-	// Unknown command returns error
-	_, err = captureHelp(func() error { return helpCommand(s, []string{"NOSUCHCMD"}, 1) })
-	assert.Error(t, err, "helpCommand unknown should return error")
-	assert.Contains(t, err.Error(), "'NOSUCHCMD' is not a recognized command")
+	// Interactive command spelling is accepted.
+	output, err = captureHelp(func() error { return helpCommand(s, []string{"ON ERROR"}, 1) })
+	assert.NoError(t, err, "helpCommand ON ERROR should not error")
+	assert.Contains(t, output, ":on error", "HELP ON ERROR should show on error help")
+	assert.NotContains(t, output, ":connect", "HELP ON ERROR should not show connect help")
 
-	// Short forms like ED are resolved by the command regex, not by :HELP.
-	// :HELP uses map keys (EDIT, READFILE, etc.), so :HELP ED is unrecognized.
-	_, err = captureHelp(func() error { return helpCommand(s, []string{"ED"}, 1) })
-	assert.Error(t, err, "helpCommand ED should error (not a map key)")
-	assert.Contains(t, err.Error(), "'ED' is not a recognized command")
+	// Unknown commands fall through to the full listing.
+	output, err = captureHelp(func() error { return helpCommand(s, []string{"NOSUCHCMD"}, 1) })
+	assert.NoError(t, err, "helpCommand unknown should not error")
+	assert.Contains(t, output, ":connect", "HELP unknown should show the full listing")
+	assert.Contains(t, output, ":exit", "HELP unknown should show the full listing")
 }
 
 func TestAllCommandsHaveHelp(t *testing.T) {
@@ -592,14 +593,13 @@ func TestPerftraceCloseChain(t *testing.T) {
 
 	// Redirect to file1, then to file2 -- file1 should be closed
 	err = perftraceCommand(s, []string{file1.Name()}, 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	firstStat, ok := s.GetStat().(*os.File)
+	require.True(t, ok, "first stat writer should be an *os.File")
 	err = perftraceCommand(s, []string{file2.Name()}, 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// file1 should be closed: a second close returns an error
-	f1, err := os.Open(file1.Name())
-	assert.NoError(t, err, "file1 should be reopenable after close")
-	_ = f1.Close()
+	assert.Error(t, firstStat.Close(), "first stat writer should already be closed")
 
 	// Clean up
 	s.SetStat(nil)

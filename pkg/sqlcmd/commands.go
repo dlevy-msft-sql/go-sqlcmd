@@ -30,8 +30,7 @@ type Command struct {
 	name string
 	// whether the command is a system command
 	isSystem bool
-	// help is the text shown by :help for this command.
-	// Multiple lines are allowed. Empty means hidden from :help.
+	// help is the text shown by :help for this command. All commands must provide it.
 	help string
 }
 
@@ -625,14 +624,13 @@ func helpCommand(s *Sqlcmd, args []string, line uint) error {
 	// This matches ODBC sqlcmd behavior.
 	w := os.Stdout
 
-	// :HELP <command> shows help for a single command
+	// :HELP <command> shows help for a single command.
 	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-		key := strings.ToUpper(strings.TrimSpace(args[0]))
+		key := strings.ToUpper(strings.Join(strings.Fields(args[0]), ""))
 		if cmd, ok := s.Cmd[key]; ok && cmd.help != "" {
 			_, err := w.Write([]byte(cmd.help))
 			return err
 		}
-		return fmt.Errorf("'%s' is not a recognized command. Type :HELP for a list of commands", key)
 	}
 
 	// Collect and sort by command name for stable output order
