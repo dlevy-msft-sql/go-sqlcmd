@@ -567,10 +567,17 @@ func TestPerftraceCommand(t *testing.T) {
 	assert.NoError(t, err, "perftraceCommand with stdout")
 	assert.Equal(t, os.Stdout, s.GetStat(), "stat set to stdout")
 
+	err = perftraceCommand(s, []string{" stdout "}, 1)
+	assert.NoError(t, err, "perftraceCommand with padded stdout")
+	assert.Equal(t, os.Stdout, s.GetStat(), "stat set to stdout with surrounding whitespace")
+
 	// Test redirect to stderr
 	err = perftraceCommand(s, []string{"stderr"}, 1)
 	assert.NoError(t, err, "perftraceCommand with stderr")
 	assert.Equal(t, os.Stderr, s.GetStat(), "stat set to stderr")
+
+	err = perftraceCommand(s, []string{"   "}, 1)
+	assert.EqualError(t, err, InvalidCommandError("PERFTRACE", 1).Error(), "perftraceCommand with whitespace argument")
 
 	// Test redirect to file
 	file, err := os.CreateTemp("", "sqlcmdperf")

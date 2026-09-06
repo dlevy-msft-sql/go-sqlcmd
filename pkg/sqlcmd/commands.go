@@ -344,6 +344,10 @@ func redirectWriter(s *Sqlcmd, args []string, line uint, name string, setter fun
 	if err != nil {
 		return err
 	}
+	filePath = strings.TrimSpace(filePath)
+	if filePath == "" {
+		return InvalidCommandError(name, line)
+	}
 	switch {
 	case strings.EqualFold(filePath, "stdout"):
 		setter(os.Stdout)
