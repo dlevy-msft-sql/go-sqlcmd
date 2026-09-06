@@ -45,8 +45,8 @@ func newCommands() Commands {
 			action: exitCommand,
 			name:   "EXIT",
 			help: ":exit\n  - Quits sqlcmd immediately.\n" +
-				":exit()\n  - Execute statement cache; quit with no return value.\n" +
-				":exit(<query>)\n  - Execute the specified query; returns numeric result.\n",
+				":exit()\n  - Executes the statement cache; quits with no return value.\n" +
+				":exit(<query>)\n  - Executes the specified query; returns its numeric result.\n",
 		},
 		"QUIT": {
 			regex:  regexp.MustCompile(`(?im)^[\t ]*?:?QUIT(?:[ \t]+(.*$)|$)`),
@@ -627,10 +627,17 @@ func helpCommand(s *Sqlcmd, args []string, line uint) error {
 
 	// :HELP <command> shows help for a single command.
 	if len(args) > 0 && strings.TrimSpace(args[0]) != "" {
-		key := strings.ToUpper(strings.Join(strings.Fields(args[0]), ""))
+		arg := strings.TrimSpace(args[0])
+		key := strings.ToUpper(strings.Join(strings.Fields(arg), ""))
 		if cmd, ok := s.Cmd[key]; ok && cmd.help != "" {
 			_, err := w.Write([]byte(cmd.help))
 			return err
+		}
+		for _, candidate := range []string{arg, ":" + arg} {
+			if cmd, _ := s.Cmd.matchCommand(candidate); cmd != nil && cmd.help != "" {
+				_, err := w.Write([]byte(cmd.help))
+				return err
+			}
 		}
 	}
 

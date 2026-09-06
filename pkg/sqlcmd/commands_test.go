@@ -521,6 +521,22 @@ func TestHelpCommand(t *testing.T) {
 	assert.Contains(t, output, ":on error", "HELP ON ERROR should show on error help")
 	assert.NotContains(t, output, ":connect", "HELP ON ERROR should not show connect help")
 
+	for _, tc := range []struct {
+		name string
+		help string
+	}{
+		{"r", ":r <filename>"},
+		{"ed", ":ed"},
+		{"!!", ":!! [<command>]"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			output, err := captureHelp(func() error { return helpCommand(s, []string{tc.name}, 1) })
+			assert.NoError(t, err)
+			assert.Contains(t, output, tc.help)
+			assert.NotContains(t, output, ":connect")
+		})
+	}
+
 	// Unknown commands fall through to the full listing.
 	output, err = captureHelp(func() error { return helpCommand(s, []string{"NOSUCHCMD"}, 1) })
 	assert.NoError(t, err, "helpCommand unknown should not error")
