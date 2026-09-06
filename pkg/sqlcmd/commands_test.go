@@ -483,13 +483,17 @@ func TestHelpCommand(t *testing.T) {
 		old := os.Stdout
 		r, w, pErr := os.Pipe()
 		require.NoError(t, pErr)
+		defer func() {
+			os.Stdout = old
+			_ = w.Close()
+			_ = r.Close()
+		}()
 		os.Stdout = w
 		fnErr := fn()
 		_ = w.Close()
 		os.Stdout = old
 		var out bytes.Buffer
 		_, _ = io.Copy(&out, r)
-		_ = r.Close()
 		return out.String(), fnErr
 	}
 
