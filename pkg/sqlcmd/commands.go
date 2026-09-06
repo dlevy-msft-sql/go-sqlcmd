@@ -70,12 +70,12 @@ func newCommands() Commands {
 			regex:  regexp.MustCompile(`(?im)^[ \t]*:ERROR(?:[ \t]+(.*$)|$)`),
 			action: errorCommand,
 			name:   "ERROR",
-			help:   ":error <dest>\n  - Redirects error output to a file, stderr, or stdout.\n",
+			help:   ":error <filename>|stderr|stdout\n  - Redirects error output to a file, stderr, or stdout.\n",
 		}, "READFILE": {
 			regex:  regexp.MustCompile(`(?im)^[ \t]*:R(?:[ \t]+(.*$)|$)`),
 			action: readFileCommand,
 			name:   "READFILE",
-			help:   ":r <filename>\n  - Append file contents to the statement cache.\n",
+			help:   ":r <filename>\n  - Appends file contents to the statement cache.\n",
 		},
 		"SETVAR": {
 			regex:  regexp.MustCompile(`(?im)^[ \t]*:SETVAR(?:[ \t]+(.*$)|$)`),
@@ -359,6 +359,20 @@ func redirectWriter(s *Sqlcmd, args []string, line uint, name string, setter fun
 	return nil
 }
 
+type transformWriteCloser struct {
+	*transform.Writer
+	closer io.Closer
+}
+
+func (w *transformWriteCloser) Close() error {
+	err := w.Writer.Close()
+	closeErr := w.closer.Close()
+	if err != nil {
+		return err
+	}
+	return closeErr
+}
+
 // outCommand changes the output writer to use a file.
 // When -u (UnicodeOutputFile) is set, file output is wrapped in a UTF-16LE
 // BOM-prefixed encoder. ODBC sqlcmd doesn't write a BOM, but go-sqlcmd does
@@ -370,7 +384,10 @@ func outCommand(s *Sqlcmd, args []string, line uint) error {
 	return redirectWriter(s, args, line, "OUT", func(w io.WriteCloser) {
 		if w != os.Stdout && w != os.Stderr {
 			win16le := unicode.UTF16(unicode.LittleEndian, unicode.UseBOM)
-			w = transform.NewWriter(w, win16le.NewEncoder())
+			w = &transformWriteCloser{
+				Writer: transform.NewWriter(w, win16le.NewEncoder()),
+				closer: w,
+			}
 		}
 		s.SetOutput(w)
 	})

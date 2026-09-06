@@ -620,3 +620,23 @@ func TestPerftraceCloseChain(t *testing.T) {
 	// Clean up
 	s.SetStat(nil)
 }
+
+func TestUnicodeOutClosesFile(t *testing.T) {
+	s := New(nil, "", InitializeVariables(false))
+	s.UnicodeOutputFile = true
+
+	file, err := os.CreateTemp("", "sqlcmdout")
+	require.NoError(t, err)
+	fileName := file.Name()
+	require.NoError(t, file.Close())
+	defer func() { _ = os.Remove(fileName) }()
+
+	require.NoError(t, outCommand(s, []string{fileName}, 1))
+	output, ok := s.GetOutput().(*transformWriteCloser)
+	require.True(t, ok)
+	outputFile, ok := output.closer.(*os.File)
+	require.True(t, ok)
+
+	require.NoError(t, outCommand(s, []string{"stdout"}, 1))
+	assert.Error(t, outputFile.Close(), "Unicode output file should already be closed")
+}
